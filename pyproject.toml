@@ -1,6 +1,6 @@
 [project]
 name = "trustbit_barcode"
-version = "1.0.0"
+version = "1.0.2"
 description = "Direct thermal barcode label printing from ERPNext with QZ Tray"
 authors = [
     {name = "Trustbit", email = "ra.pandey008@gmail.com"}

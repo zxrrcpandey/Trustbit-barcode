@@ -4,6 +4,7 @@
 
 """
 Trustbit Advance Barcode Print - API v1.0.2
+Fetches barcodes, selling prices, and settings from database
 """
 
 from __future__ import unicode_literals
@@ -161,3 +162,17 @@ def get_barcode_print_settings():
                 }
             ]
         }
+
+
+@frappe.whitelist()
+def get_price_lists():
+    """Get all selling price lists."""
+    price_lists = frappe.db.sql("""
+        SELECT name
+        FROM `tabPrice List`
+        WHERE selling = 1
+        AND enabled = 1
+        ORDER BY name ASC
+    """, as_dict=True)
+    
+    return [p.name for p in price_lists]

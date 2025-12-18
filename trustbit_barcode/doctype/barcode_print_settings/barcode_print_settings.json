@@ -7,7 +7,6 @@
         "default_printer",
         "default_price_list",
         "column_break_1",
-        "default_label_size",
         "section_break_label_sizes",
         "label_sizes"
     ],
@@ -17,41 +16,33 @@
             "fieldtype": "Data",
             "label": "Default Printer Name",
             "default": "Bar Code Printer TT065-50",
-            "description": "Enter the exact printer name as it appears in your system"
+            "reqd": 1
         },
         {
             "fieldname": "default_price_list",
             "fieldtype": "Link",
             "label": "Default Price List",
             "options": "Price List",
-            "default": "Standard Selling",
-            "description": "Price list to fetch selling rates from"
+            "default": "Standard Selling"
         },
         {
             "fieldname": "column_break_1",
             "fieldtype": "Column Break"
         },
         {
-            "fieldname": "default_label_size",
-            "fieldtype": "Link",
-            "label": "Default Label Size",
-            "options": "Barcode Label Size",
-            "description": "Default label size for printing"
-        },
-        {
             "fieldname": "section_break_label_sizes",
             "fieldtype": "Section Break",
-            "label": "Label Sizes Configuration"
+            "label": "Label Sizes"
         },
         {
             "fieldname": "label_sizes",
             "fieldtype": "Table",
             "label": "Label Sizes",
             "options": "Barcode Label Size",
-            "description": "Configure different label sizes and their TSPL settings"
+            "reqd": 1
         }
     ],
-    "index_web_pages_for_search": 0,
+    "index_web_pages_for_search": 1,
     "issingle": 1,
     "links": [],
     "modified": "2025-12-18 12:00:00.000000",
@@ -76,6 +67,5 @@
         }
     ],
     "sort_field": "modified",
-    "sort_order": "DESC",
-    "track_changes": 0
+    "sort_order": "DESC"
 }

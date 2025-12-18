@@ -28,14 +28,13 @@
             "fieldtype": "Data",
             "label": "Label Name",
             "reqd": 1,
-            "in_list_view": 1,
-            "description": "e.g., 35x15mm 2-up"
+            "in_list_view": 1
         },
         {
             "fieldname": "is_default",
             "fieldtype": "Check",
             "label": "Is Default",
-            "default": 0,
+            "default": "0",
             "in_list_view": 1
         },
         {
@@ -46,7 +45,6 @@
             "fieldname": "printer_name",
             "fieldtype": "Data",
             "label": "Printer Name",
-            "description": "Leave blank to use default printer",
             "in_list_view": 1
         },
         {
@@ -57,26 +55,24 @@
         {
             "fieldname": "label_width",
             "fieldtype": "Int",
-            "label": "Label Width (mm)",
-            "default": 70,
+            "label": "Width (mm)",
+            "default": "70",
             "reqd": 1,
-            "in_list_view": 1,
-            "description": "Total width of label roll"
+            "in_list_view": 1
         },
         {
             "fieldname": "label_height",
             "fieldtype": "Int",
-            "label": "Label Height (mm)",
-            "default": 15,
+            "label": "Height (mm)",
+            "default": "15",
             "reqd": 1,
             "in_list_view": 1
         },
         {
             "fieldname": "gap_height",
             "fieldtype": "Int",
-            "label": "Gap Height (mm)",
-            "default": 3,
-            "description": "Gap between labels"
+            "label": "Gap (mm)",
+            "default": "3"
         },
         {
             "fieldname": "column_break_2",
@@ -86,34 +82,30 @@
             "fieldname": "labels_per_row",
             "fieldtype": "Int",
             "label": "Labels Per Row",
-            "default": 2,
-            "description": "Number of labels across (1 or 2)"
+            "default": "2"
         },
         {
             "fieldname": "printable_height",
             "fieldtype": "Int",
             "label": "Printable Height (mm)",
-            "default": 10,
-            "description": "Actual printable area height"
+            "default": "10"
         },
         {
             "fieldname": "section_break_tspl",
             "fieldtype": "Section Break",
-            "label": "TSPL Coordinates (dots at 203 DPI)"
+            "label": "TSPL Coordinates"
         },
         {
             "fieldname": "left_label_x",
             "fieldtype": "Int",
-            "label": "Left Label X Position",
-            "default": 8,
-            "description": "X coordinate for left label"
+            "label": "Left Label X",
+            "default": "8"
         },
         {
             "fieldname": "right_label_x",
             "fieldtype": "Int",
-            "label": "Right Label X Position",
-            "default": 305,
-            "description": "X coordinate for right label (2-up only)"
+            "label": "Right Label X",
+            "default": "305"
         },
         {
             "fieldname": "column_break_3",
@@ -122,16 +114,14 @@
         {
             "fieldname": "print_speed",
             "fieldtype": "Int",
-            "label": "Print Speed",
-            "default": 4,
-            "description": "TSPL SPEED command (1-10)"
+            "label": "Speed",
+            "default": "4"
         },
         {
             "fieldname": "print_density",
             "fieldtype": "Int",
-            "label": "Print Density",
-            "default": 8,
-            "description": "TSPL DENSITY command (1-15)"
+            "label": "Density",
+            "default": "8"
         }
     ],
     "index_web_pages_for_search": 0,
@@ -144,6 +134,5 @@
     "owner": "Administrator",
     "permissions": [],
     "sort_field": "modified",
-    "sort_order": "DESC",
-    "track_changes": 0
+    "sort_order": "DESC"
 }

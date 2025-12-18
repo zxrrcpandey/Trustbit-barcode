@@ -5,32 +5,32 @@
     "engine": "InnoDB",
     "field_order": [
         "default_printer",
-        "default_price_list",
         "column_break_1",
-        "section_break_label_sizes",
+        "default_price_list",
+        "section_break_sizes",
         "label_sizes"
     ],
     "fields": [
         {
+            "default": "Bar Code Printer TT065-50",
             "fieldname": "default_printer",
             "fieldtype": "Data",
             "label": "Default Printer Name",
-            "default": "Bar Code Printer TT065-50",
             "reqd": 1
-        },
-        {
-            "fieldname": "default_price_list",
-            "fieldtype": "Link",
-            "label": "Default Price List",
-            "options": "Price List",
-            "default": "Standard Selling"
         },
         {
             "fieldname": "column_break_1",
             "fieldtype": "Column Break"
         },
         {
-            "fieldname": "section_break_label_sizes",
+            "default": "Standard Selling",
+            "fieldname": "default_price_list",
+            "fieldtype": "Link",
+            "label": "Default Price List",
+            "options": "Price List"
+        },
+        {
+            "fieldname": "section_break_sizes",
             "fieldtype": "Section Break",
             "label": "Label Sizes"
         },

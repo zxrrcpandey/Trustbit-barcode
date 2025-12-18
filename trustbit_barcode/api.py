@@ -4,7 +4,6 @@
 
 """
 Trustbit Advance Barcode Print - API v1.0.2
-Fetches barcodes, selling prices, and settings from database
 """
 
 from __future__ import unicode_literals
@@ -14,9 +13,7 @@ import json
 
 @frappe.whitelist()
 def get_item_barcodes(item_codes):
-    """
-    Fetch actual barcodes from Item Barcode table for given item codes.
-    """
+    """Fetch barcodes from Item Barcode table."""
     if isinstance(item_codes, str):
         try:
             item_codes = json.loads(item_codes)
@@ -43,9 +40,7 @@ def get_item_barcodes(item_codes):
 
 @frappe.whitelist()
 def get_item_details(item_codes, price_list=None):
-    """
-    Fetch barcodes AND selling prices for items.
-    """
+    """Fetch barcodes AND selling prices for items."""
     if isinstance(item_codes, str):
         try:
             item_codes = json.loads(item_codes)
@@ -55,7 +50,7 @@ def get_item_details(item_codes, price_list=None):
     if not item_codes:
         return {}
     
-    # Get default price list from settings if not provided
+    # Get default price list from settings
     if not price_list:
         try:
             settings = frappe.get_single("Barcode Print Settings")
@@ -78,16 +73,16 @@ def get_item_details(item_codes, price_list=None):
         if p.item_code not in price_map:
             price_map[p.item_code] = p.price_list_rate or 0
     
-    # Fallback to standard_rate from Item master
+    # Fallback to standard_rate
     items_without_price = [ic for ic in item_codes if ic not in price_map]
     if items_without_price:
-        fallback_rates = frappe.db.sql("""
+        fallback = frappe.db.sql("""
             SELECT name, standard_rate
             FROM `tabItem`
             WHERE name IN %s
         """, [items_without_price], as_dict=True)
         
-        for item in fallback_rates:
+        for item in fallback:
             if item.name not in price_map:
                 price_map[item.name] = item.standard_rate or 0
     
@@ -104,7 +99,6 @@ def get_item_details(item_codes, price_list=None):
         if b.parent not in barcode_map:
             barcode_map[b.parent] = b.barcode
     
-    # Combine into single response
     result = {}
     for item_code in item_codes:
         result[item_code] = {
@@ -117,13 +111,10 @@ def get_item_details(item_codes, price_list=None):
 
 @frappe.whitelist()
 def get_barcode_print_settings():
-    """
-    Get all barcode print settings including label sizes.
-    """
+    """Get all barcode print settings."""
     try:
         settings = frappe.get_single("Barcode Print Settings")
         
-        # Get label sizes from child table
         label_sizes = []
         default_size = None
         
@@ -153,7 +144,7 @@ def get_barcode_print_settings():
             "default_label_size": default_size or (label_sizes[0]["name"] if label_sizes else "35x15mm 2-up"),
             "label_sizes": label_sizes
         }
-    except Exception as e:
+    except:
         # Return defaults if settings not configured
         return {
             "default_printer": "Bar Code Printer TT065-50",
@@ -163,46 +154,10 @@ def get_barcode_print_settings():
                 {
                     "name": "35x15mm 2-up",
                     "printer_name": "Bar Code Printer TT065-50",
-                    "width": 70,
-                    "height": 15,
-                    "gap": 3,
-                    "labels_per_row": 2,
-                    "printable_height": 10,
-                    "left_label_x": 8,
-                    "right_label_x": 305,
-                    "speed": 4,
-                    "density": 8,
-                    "is_default": True
-                },
-                {
-                    "name": "35x21mm 2-up",
-                    "printer_name": "Bar Code Printer TT065-50",
-                    "width": 70,
-                    "height": 21,
-                    "gap": 3,
-                    "labels_per_row": 2,
-                    "printable_height": 10,
-                    "left_label_x": 8,
-                    "right_label_x": 305,
-                    "speed": 4,
-                    "density": 8,
-                    "is_default": False
+                    "width": 70, "height": 15, "gap": 3,
+                    "labels_per_row": 2, "printable_height": 10,
+                    "left_label_x": 8, "right_label_x": 305,
+                    "speed": 4, "density": 8, "is_default": True
                 }
             ]
         }
-
-
-@frappe.whitelist()
-def get_price_lists():
-    """
-    Get all selling price lists for dropdown.
-    """
-    price_lists = frappe.db.sql("""
-        SELECT name
-        FROM `tabPrice List`
-        WHERE selling = 1
-        AND enabled = 1
-        ORDER BY name ASC
-    """, as_dict=True)
-    
-    return [p.name for p in price_lists]

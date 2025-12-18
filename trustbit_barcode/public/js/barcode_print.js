@@ -1,20 +1,12 @@
 /**
  * Trustbit Advance Barcode Print v1.0.2
  * Direct thermal barcode label printing from ERPNext with QZ Tray
- * 
- * Copyright (c) 2025 Trustbit
- * License: MIT
- * 
- * Changes in v1.0.2:
- * - Fetch settings from Barcode Print Settings DocType
- * - Support multiple label sizes with different printers
- * - Dynamic TSPL generation based on settings
+ * Copyright (c) 2025 Trustbit - MIT License
  */
 
 var trustbit_barcode = {
     settings: null,
     
-    // Load settings from database
     load_settings: function(callback) {
         if (this.settings) {
             callback(this.settings);
@@ -40,37 +32,25 @@ var trustbit_barcode = {
             default_printer: "Bar Code Printer TT065-50",
             default_price_list: "Standard Selling",
             default_label_size: "35x15mm 2-up",
-            label_sizes: [
-                {
-                    name: "35x15mm 2-up",
-                    printer_name: "Bar Code Printer TT065-50",
-                    width: 70, height: 15, gap: 3,
-                    labels_per_row: 2, printable_height: 10,
-                    left_label_x: 8, right_label_x: 305,
-                    speed: 4, density: 8, is_default: true
-                },
-                {
-                    name: "35x21mm 2-up",
-                    printer_name: "Bar Code Printer TT065-50",
-                    width: 70, height: 21, gap: 3,
-                    labels_per_row: 2, printable_height: 10,
-                    left_label_x: 8, right_label_x: 305,
-                    speed: 4, density: 8, is_default: false
-                }
-            ]
+            label_sizes: [{
+                name: "35x15mm 2-up",
+                printer_name: "Bar Code Printer TT065-50",
+                width: 70, height: 15, gap: 3,
+                labels_per_row: 2, printable_height: 10,
+                left_label_x: 8, right_label_x: 305,
+                speed: 4, density: 8, is_default: true
+            }]
         };
     },
 
     show_barcode_dialog: function(frm) {
         let self = this;
         
-        // Load settings first
         this.load_settings(function(settings) {
             let item_codes = frm.doc.items.map(item => item.item_code);
             
-            console.log("=== TRUSTBIT BARCODE v1.0.2 DEBUG ===");
+            console.log("=== TRUSTBIT BARCODE v1.0.2 ===");
             console.log("Settings:", settings);
-            console.log("Item codes:", item_codes);
             
             frappe.call({
                 method: "trustbit_barcode.api.get_item_details",
@@ -101,7 +81,6 @@ var trustbit_barcode = {
     create_dialog: function(frm, items, settings) {
         let self = this;
         
-        // Build label size options from settings
         let label_options = settings.label_sizes.map(s => s.name).join("\n");
         let default_size = settings.default_label_size || settings.label_sizes[0]?.name;
         
@@ -125,7 +104,7 @@ var trustbit_barcode = {
             fields.push({ fieldtype: "Column Break" });
             fields.push({ fieldtype: "Data", fieldname: "barcode_" + idx, label: "Barcode", default: item.barcode, read_only: 1 });
             fields.push({ fieldtype: "Column Break" });
-            fields.push({ fieldtype: "Currency", fieldname: "rate_" + idx, label: "Rate (₹)", default: item.rate, read_only: 0 });
+            fields.push({ fieldtype: "Currency", fieldname: "rate_" + idx, label: "Rate (₹)", default: item.rate });
             fields.push({ fieldtype: "Column Break" });
             fields.push({ fieldtype: "Int", fieldname: "qty_" + idx, label: "Print Qty", default: item.qty || 1 });
             fields.push({ fieldtype: "Section Break" });
@@ -155,18 +134,13 @@ var trustbit_barcode = {
                     return;
                 }
                 
-                // Find selected label size config
-                let size_config = settings.label_sizes.find(s => s.name === values.label_size);
-                if (!size_config) {
-                    size_config = settings.label_sizes[0];
-                }
+                let size_config = settings.label_sizes.find(s => s.name === values.label_size) || settings.label_sizes[0];
                 
                 d.hide();
                 self.print_via_qz(size_config, selected, frm.doc.name);
             }
         });
         
-        // Button handlers
         d.$wrapper.find("[data-fieldname=select_all_btn]").on("click", function() {
             items.forEach((item, idx) => d.set_value("check_" + idx, 1));
         });
@@ -184,31 +158,30 @@ var trustbit_barcode = {
         if (typeof qz === "undefined") {
             frappe.msgprint({
                 title: __("QZ Tray Not Found"),
-                message: __("QZ Tray is not loaded. Please ensure QZ Tray is running and refresh the page."),
+                message: __("Please ensure QZ Tray is running and refresh the page."),
                 indicator: "red"
             });
             return;
         }
         
-        frappe.show_alert({ message: __("Connecting to QZ Tray..."), indicator: "blue" });
+        frappe.show_alert({ message: __("Connecting..."), indicator: "blue" });
         
         let connectPromise = qz.websocket.isActive() ? Promise.resolve() : qz.websocket.connect();
         
         connectPromise.then(function() {
-            frappe.show_alert({ message: __("Printing to " + size_config.printer_name + "..."), indicator: "blue" });
+            frappe.show_alert({ message: __("Printing to " + size_config.printer_name), indicator: "blue" });
             
             let tspl = self.generate_tspl(size_config, items);
-            console.log("TSPL Commands:", tspl);
-            console.log("Printer:", size_config.printer_name);
+            console.log("TSPL:", tspl);
             
             let config = qz.configs.create(size_config.printer_name);
             return qz.print(config, [{ type: "raw", format: "command", data: tspl }]);
             
         }).then(function() {
-            frappe.show_alert({ message: __("Printed successfully: " + doc_name), indicator: "green" });
+            frappe.show_alert({ message: __("Printed: " + doc_name), indicator: "green" });
         }).catch(function(err) {
-            console.error("QZ Tray Error:", err);
-            frappe.msgprint({ title: __("Print Error"), message: __("Error: " + (err.message || err)), indicator: "red" });
+            console.error("QZ Error:", err);
+            frappe.msgprint({ title: __("Print Error"), message: String(err), indicator: "red" });
         });
     },
 
@@ -222,7 +195,6 @@ var trustbit_barcode = {
             ""
         ];
         
-        // Expand items based on print quantity
         let labels = [];
         items.forEach(item => {
             let qty = parseInt(item.print_qty) || 1;
@@ -236,13 +208,11 @@ var trustbit_barcode = {
             }
         });
         
-        // Generate labels based on labels_per_row setting
-        let labels_per_row = size_config.labels_per_row || 2;
+        let per_row = size_config.labels_per_row || 2;
         
-        for (let i = 0; i < labels.length; i += labels_per_row) {
+        for (let i = 0; i < labels.length; i += per_row) {
             cmds.push("CLS");
             
-            // Left label
             let l1 = labels[i];
             let name1 = this.escape_text(l1.name.substring(0, 14));
             let rate1 = parseFloat(l1.rate).toFixed(0);
@@ -252,8 +222,7 @@ var trustbit_barcode = {
             cmds.push('TEXT ' + size_config.left_label_x + ',80,"1",0,1,1,"' + l1.barcode + '"');
             cmds.push('TEXT ' + size_config.left_label_x + ',96,"1",0,1,1,"' + l1.item_code + ' Rs' + rate1 + '"');
             
-            // Right label (only if 2-up and there's a second label)
-            if (labels_per_row >= 2 && i + 1 < labels.length) {
+            if (per_row >= 2 && i + 1 < labels.length) {
                 let l2 = labels[i + 1];
                 let name2 = this.escape_text(l2.name.substring(0, 14));
                 let rate2 = parseFloat(l2.rate).toFixed(0);
@@ -277,7 +246,7 @@ var trustbit_barcode = {
     }
 };
 
-// Register event handlers
+// Register handlers
 frappe.ui.form.on("Purchase Invoice", {
     refresh: function(frm) {
         if (frm.doc.docstatus === 1) {
@@ -308,4 +277,4 @@ frappe.ui.form.on("Stock Entry", {
     }
 });
 
-console.log("Trustbit Advance Barcode Print v1.0.2 loaded");
+console.log("Trustbit Barcode v1.0.2 loaded");

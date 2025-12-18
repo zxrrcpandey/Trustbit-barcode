@@ -1,81 +1,122 @@
 /**
- * Trustbit Advance Barcode Print v1.0.1
+ * Trustbit Advance Barcode Print v1.0.2
  * Direct thermal barcode label printing from ERPNext with QZ Tray
  * 
  * Copyright (c) 2025 Trustbit
  * License: MIT
  * 
- * Changes in v1.0.1:
- * - Fetch selling price from Item Price table (Standard Selling price list)
- * - Fallback to standard_rate if no price found
+ * Changes in v1.0.2:
+ * - Fetch settings from Barcode Print Settings DocType
+ * - Support multiple label sizes with different printers
+ * - Dynamic TSPL generation based on settings
  */
 
 var trustbit_barcode = {
-    config: {
-        printer_name: "Bar Code Printer TT065-50",
-        label_sizes: {
-            "35x15": { width: 70, height: 15, gap: 3, printable_height: 10 },
-            "35x21": { width: 70, height: 21, gap: 3, printable_height: 10 },
-            "38x25": { width: 76, height: 25, gap: 2, printable_height: 20 }
-        },
-        default_size: "35x15",
-        left_label_x: 8,
-        right_label_x: 305
-    },
-
-    show_barcode_dialog: function(frm) {
-        let item_codes = frm.doc.items.map(item => item.item_code);
+    settings: null,
+    
+    // Load settings from database
+    load_settings: function(callback) {
+        if (this.settings) {
+            callback(this.settings);
+            return;
+        }
         
-        console.log("=== TRUSTBIT BARCODE v1.0.1 DEBUG ===");
-        console.log("Item codes:", item_codes);
-        
-        // Fetch barcodes AND selling prices from Item Price table
         frappe.call({
-            method: "trustbit_barcode.api.get_item_details",
-            args: { 
-                item_codes: JSON.stringify(item_codes),
-                price_list: "Standard Selling"
+            method: "trustbit_barcode.api.get_barcode_print_settings",
+            async: false,
+            callback: (r) => {
+                this.settings = r.message || this.get_default_settings();
+                callback(this.settings);
             },
-            callback: function(r) {
-                console.log("API Response:", r);
-                let item_details = r.message || {};
-                
-                let items = frm.doc.items.map(item => {
-                    let details = item_details[item.item_code] || {};
-                    let barcode = details.barcode || item.item_code;
-                    let rate = details.selling_rate || 0;
-                    
-                    console.log(item.item_code + " => Barcode: " + barcode + ", Selling Rate: " + rate);
-                    
-                    return {
-                        item_code: item.item_code,
-                        item_name: item.item_name,
-                        qty: item.qty,
-                        rate: rate,
-                        barcode: barcode
-                    };
-                });
-                
-                trustbit_barcode.create_dialog(frm, items);
-            },
-            error: function(err) {
-                console.error("Error fetching item details:", err);
-                frappe.msgprint("Error fetching item details. Please try again.");
+            error: () => {
+                this.settings = this.get_default_settings();
+                callback(this.settings);
             }
         });
     },
+    
+    get_default_settings: function() {
+        return {
+            default_printer: "Bar Code Printer TT065-50",
+            default_price_list: "Standard Selling",
+            default_label_size: "35x15mm 2-up",
+            label_sizes: [
+                {
+                    name: "35x15mm 2-up",
+                    printer_name: "Bar Code Printer TT065-50",
+                    width: 70, height: 15, gap: 3,
+                    labels_per_row: 2, printable_height: 10,
+                    left_label_x: 8, right_label_x: 305,
+                    speed: 4, density: 8, is_default: true
+                },
+                {
+                    name: "35x21mm 2-up",
+                    printer_name: "Bar Code Printer TT065-50",
+                    width: 70, height: 21, gap: 3,
+                    labels_per_row: 2, printable_height: 10,
+                    left_label_x: 8, right_label_x: 305,
+                    speed: 4, density: 8, is_default: false
+                }
+            ]
+        };
+    },
 
-    create_dialog: function(frm, items) {
+    show_barcode_dialog: function(frm) {
+        let self = this;
+        
+        // Load settings first
+        this.load_settings(function(settings) {
+            let item_codes = frm.doc.items.map(item => item.item_code);
+            
+            console.log("=== TRUSTBIT BARCODE v1.0.2 DEBUG ===");
+            console.log("Settings:", settings);
+            console.log("Item codes:", item_codes);
+            
+            frappe.call({
+                method: "trustbit_barcode.api.get_item_details",
+                args: { 
+                    item_codes: JSON.stringify(item_codes),
+                    price_list: settings.default_price_list
+                },
+                callback: function(r) {
+                    let item_details = r.message || {};
+                    
+                    let items = frm.doc.items.map(item => {
+                        let details = item_details[item.item_code] || {};
+                        return {
+                            item_code: item.item_code,
+                            item_name: item.item_name,
+                            qty: item.qty,
+                            rate: details.selling_rate || 0,
+                            barcode: details.barcode || item.item_code
+                        };
+                    });
+                    
+                    self.create_dialog(frm, items, settings);
+                }
+            });
+        });
+    },
+
+    create_dialog: function(frm, items, settings) {
+        let self = this;
+        
+        // Build label size options from settings
+        let label_options = settings.label_sizes.map(s => s.name).join("\n");
+        let default_size = settings.default_label_size || settings.label_sizes[0]?.name;
+        
         let fields = [
             {
                 fieldname: "label_size",
                 fieldtype: "Select",
                 label: "Label Size",
-                options: "35x15\n35x21\n38x25",
-                default: this.config.default_size
+                options: label_options,
+                default: default_size,
+                reqd: 1
             },
             { fieldtype: "Section Break", label: "Select Items to Print" },
             { fieldname: "select_all_btn", fieldtype: "Button", label: "Select All" },
+            { fieldname: "deselect_all_btn", fieldtype: "Button", label: "Deselect All" },
             { fieldtype: "Section Break" }
         ];
         
@@ -84,7 +125,7 @@ var trustbit_barcode = {
             fields.push({ fieldtype: "Column Break" });
             fields.push({ fieldtype: "Data", fieldname: "barcode_" + idx, label: "Barcode", default: item.barcode, read_only: 1 });
             fields.push({ fieldtype: "Column Break" });
-            fields.push({ fieldtype: "Currency", fieldname: "rate_" + idx, label: "Selling Rate (₹)", default: item.rate, read_only: 0 });
+            fields.push({ fieldtype: "Currency", fieldname: "rate_" + idx, label: "Rate (₹)", default: item.rate, read_only: 0 });
             fields.push({ fieldtype: "Column Break" });
             fields.push({ fieldtype: "Int", fieldname: "qty_" + idx, label: "Print Qty", default: item.qty || 1 });
             fields.push({ fieldtype: "Section Break" });
@@ -114,19 +155,32 @@ var trustbit_barcode = {
                     return;
                 }
                 
+                // Find selected label size config
+                let size_config = settings.label_sizes.find(s => s.name === values.label_size);
+                if (!size_config) {
+                    size_config = settings.label_sizes[0];
+                }
+                
                 d.hide();
-                trustbit_barcode.print_via_qz(values.label_size, selected, frm.doc.name);
+                self.print_via_qz(size_config, selected, frm.doc.name);
             }
         });
         
+        // Button handlers
         d.$wrapper.find("[data-fieldname=select_all_btn]").on("click", function() {
             items.forEach((item, idx) => d.set_value("check_" + idx, 1));
+        });
+        
+        d.$wrapper.find("[data-fieldname=deselect_all_btn]").on("click", function() {
+            items.forEach((item, idx) => d.set_value("check_" + idx, 0));
         });
         
         d.show();
     },
 
-    print_via_qz: function(label_size, items, doc_name) {
+    print_via_qz: function(size_config, items, doc_name) {
+        let self = this;
+        
         if (typeof qz === "undefined") {
             frappe.msgprint({
                 title: __("QZ Tray Not Found"),
@@ -141,11 +195,15 @@ var trustbit_barcode = {
         let connectPromise = qz.websocket.isActive() ? Promise.resolve() : qz.websocket.connect();
         
         connectPromise.then(function() {
-            frappe.show_alert({ message: __("Printing..."), indicator: "blue" });
-            let tspl = trustbit_barcode.generate_tspl(label_size, items);
+            frappe.show_alert({ message: __("Printing to " + size_config.printer_name + "..."), indicator: "blue" });
+            
+            let tspl = self.generate_tspl(size_config, items);
             console.log("TSPL Commands:", tspl);
-            let config = qz.configs.create(trustbit_barcode.config.printer_name);
+            console.log("Printer:", size_config.printer_name);
+            
+            let config = qz.configs.create(size_config.printer_name);
             return qz.print(config, [{ type: "raw", format: "command", data: tspl }]);
+            
         }).then(function() {
             frappe.show_alert({ message: __("Printed successfully: " + doc_name), indicator: "green" });
         }).catch(function(err) {
@@ -154,18 +212,17 @@ var trustbit_barcode = {
         });
     },
 
-    generate_tspl: function(label_size, items) {
-        let size_config = this.config.label_sizes[label_size] || this.config.label_sizes["35x15"];
-        
+    generate_tspl: function(size_config, items) {
         let cmds = [
             "SIZE " + size_config.width + " mm, " + size_config.height + " mm",
             "GAP " + size_config.gap + " mm, 0 mm",
-            "SPEED 4",
-            "DENSITY 8",
+            "SPEED " + size_config.speed,
+            "DENSITY " + size_config.density,
             "DIRECTION 1",
             ""
         ];
         
+        // Expand items based on print quantity
         let labels = [];
         items.forEach(item => {
             let qty = parseInt(item.print_qty) || 1;
@@ -179,27 +236,32 @@ var trustbit_barcode = {
             }
         });
         
-        for (let i = 0; i < labels.length; i += 2) {
+        // Generate labels based on labels_per_row setting
+        let labels_per_row = size_config.labels_per_row || 2;
+        
+        for (let i = 0; i < labels.length; i += labels_per_row) {
             cmds.push("CLS");
             
+            // Left label
             let l1 = labels[i];
             let name1 = this.escape_text(l1.name.substring(0, 14));
             let rate1 = parseFloat(l1.rate).toFixed(0);
             
-            cmds.push('TEXT ' + this.config.left_label_x + ',2,"1",0,1,1,"' + name1 + '"');
-            cmds.push('BARCODE ' + this.config.left_label_x + ',16,"128",60,0,0,2,4,"' + l1.barcode + '"');
-            cmds.push('TEXT ' + this.config.left_label_x + ',80,"1",0,1,1,"' + l1.barcode + '"');
-            cmds.push('TEXT ' + this.config.left_label_x + ',96,"1",0,1,1,"' + l1.item_code + ' Rs' + rate1 + '"');
+            cmds.push('TEXT ' + size_config.left_label_x + ',2,"1",0,1,1,"' + name1 + '"');
+            cmds.push('BARCODE ' + size_config.left_label_x + ',16,"128",60,0,0,2,4,"' + l1.barcode + '"');
+            cmds.push('TEXT ' + size_config.left_label_x + ',80,"1",0,1,1,"' + l1.barcode + '"');
+            cmds.push('TEXT ' + size_config.left_label_x + ',96,"1",0,1,1,"' + l1.item_code + ' Rs' + rate1 + '"');
             
-            if (i + 1 < labels.length) {
+            // Right label (only if 2-up and there's a second label)
+            if (labels_per_row >= 2 && i + 1 < labels.length) {
                 let l2 = labels[i + 1];
                 let name2 = this.escape_text(l2.name.substring(0, 14));
                 let rate2 = parseFloat(l2.rate).toFixed(0);
                 
-                cmds.push('TEXT ' + this.config.right_label_x + ',2,"1",0,1,1,"' + name2 + '"');
-                cmds.push('BARCODE ' + this.config.right_label_x + ',16,"128",60,0,0,2,4,"' + l2.barcode + '"');
-                cmds.push('TEXT ' + this.config.right_label_x + ',80,"1",0,1,1,"' + l2.barcode + '"');
-                cmds.push('TEXT ' + this.config.right_label_x + ',96,"1",0,1,1,"' + l2.item_code + ' Rs' + rate2 + '"');
+                cmds.push('TEXT ' + size_config.right_label_x + ',2,"1",0,1,1,"' + name2 + '"');
+                cmds.push('BARCODE ' + size_config.right_label_x + ',16,"128",60,0,0,2,4,"' + l2.barcode + '"');
+                cmds.push('TEXT ' + size_config.right_label_x + ',80,"1",0,1,1,"' + l2.barcode + '"');
+                cmds.push('TEXT ' + size_config.right_label_x + ',96,"1",0,1,1,"' + l2.item_code + ' Rs' + rate2 + '"');
             }
             
             cmds.push("PRINT 1");
@@ -215,6 +277,7 @@ var trustbit_barcode = {
     }
 };
 
+// Register event handlers
 frappe.ui.form.on("Purchase Invoice", {
     refresh: function(frm) {
         if (frm.doc.docstatus === 1) {
@@ -245,4 +308,4 @@ frappe.ui.form.on("Stock Entry", {
     }
 });
 
-console.log("Trustbit Advance Barcode Print v1.0.1 loaded");
+console.log("Trustbit Advance Barcode Print v1.0.2 loaded");

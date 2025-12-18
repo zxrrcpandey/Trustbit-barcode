@@ -1,0 +1,81 @@
+{
+    "actions": [],
+    "creation": "2025-12-18 12:00:00.000000",
+    "doctype": "DocType",
+    "engine": "InnoDB",
+    "field_order": [
+        "default_printer",
+        "default_price_list",
+        "column_break_1",
+        "default_label_size",
+        "section_break_label_sizes",
+        "label_sizes"
+    ],
+    "fields": [
+        {
+            "fieldname": "default_printer",
+            "fieldtype": "Data",
+            "label": "Default Printer Name",
+            "default": "Bar Code Printer TT065-50",
+            "description": "Enter the exact printer name as it appears in your system"
+        },
+        {
+            "fieldname": "default_price_list",
+            "fieldtype": "Link",
+            "label": "Default Price List",
+            "options": "Price List",
+            "default": "Standard Selling",
+            "description": "Price list to fetch selling rates from"
+        },
+        {
+            "fieldname": "column_break_1",
+            "fieldtype": "Column Break"
+        },
+        {
+            "fieldname": "default_label_size",
+            "fieldtype": "Link",
+            "label": "Default Label Size",
+            "options": "Barcode Label Size",
+            "description": "Default label size for printing"
+        },
+        {
+            "fieldname": "section_break_label_sizes",
+            "fieldtype": "Section Break",
+            "label": "Label Sizes Configuration"
+        },
+        {
+            "fieldname": "label_sizes",
+            "fieldtype": "Table",
+            "label": "Label Sizes",
+            "options": "Barcode Label Size",
+            "description": "Configure different label sizes and their TSPL settings"
+        }
+    ],
+    "index_web_pages_for_search": 0,
+    "issingle": 1,
+    "links": [],
+    "modified": "2025-12-18 12:00:00.000000",
+    "modified_by": "Administrator",
+    "module": "Trustbit Barcode",
+    "name": "Barcode Print Settings",
+    "owner": "Administrator",
+    "permissions": [
+        {
+            "create": 1,
+            "delete": 1,
+            "email": 1,
+            "print": 1,
+            "read": 1,
+            "role": "System Manager",
+            "share": 1,
+            "write": 1
+        },
+        {
+            "read": 1,
+            "role": "All"
+        }
+    ],
+    "sort_field": "modified",
+    "sort_order": "DESC",
+    "track_changes": 0
+}

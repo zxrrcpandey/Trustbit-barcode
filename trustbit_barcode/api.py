@@ -3,8 +3,8 @@
 # For license information, please see license.txt
 
 """
-Trustbit Advance Barcode Print - API v1.0.1
-Fetches barcodes and selling prices from Item Price table
+Trustbit Advance Barcode Print - API v1.0.2
+Fetches barcodes, selling prices, and settings from database
 """
 
 from __future__ import unicode_literals
@@ -45,13 +45,6 @@ def get_item_barcodes(item_codes):
 def get_item_details(item_codes, price_list=None):
     """
     Fetch barcodes AND selling prices for items.
-    
-    Args:
-        item_codes: List of item codes or JSON string
-        price_list: Price list name (default: "Standard Selling")
-    
-    Returns:
-        Dictionary with barcode and price for each item
     """
     if isinstance(item_codes, str):
         try:
@@ -62,9 +55,13 @@ def get_item_details(item_codes, price_list=None):
     if not item_codes:
         return {}
     
-    # Default to Standard Selling price list
+    # Get default price list from settings if not provided
     if not price_list:
-        price_list = "Standard Selling"
+        try:
+            settings = frappe.get_single("Barcode Print Settings")
+            price_list = settings.default_price_list or "Standard Selling"
+        except:
+            price_list = "Standard Selling"
     
     # Get selling prices from Item Price table
     prices = frappe.db.sql("""
@@ -76,13 +73,12 @@ def get_item_details(item_codes, price_list=None):
         ORDER BY valid_from DESC
     """, [item_codes, price_list], as_dict=True)
     
-    # Build price map (use first/latest price if multiple exist)
     price_map = {}
     for p in prices:
         if p.item_code not in price_map:
             price_map[p.item_code] = p.price_list_rate or 0
     
-    # If no price found in Item Price, fallback to standard_rate from Item master
+    # Fallback to standard_rate from Item master
     items_without_price = [ic for ic in item_codes if ic not in price_map]
     if items_without_price:
         fallback_rates = frappe.db.sql("""
@@ -120,37 +116,80 @@ def get_item_details(item_codes, price_list=None):
 
 
 @frappe.whitelist()
-def get_purchase_invoice_items(purchase_invoice):
+def get_barcode_print_settings():
     """
-    Get items from a Purchase Invoice with their barcodes and selling rates.
+    Get all barcode print settings including label sizes.
     """
-    if not purchase_invoice:
-        return []
-    
-    items = frappe.db.sql("""
-        SELECT 
-            pii.item_code,
-            pii.item_name,
-            pii.qty,
-            pii.rate,
-            pii.amount
-        FROM `tabPurchase Invoice Item` pii
-        WHERE pii.parent = %s
-        ORDER BY pii.idx ASC
-    """, purchase_invoice, as_dict=True)
-    
-    if not items:
-        return []
-    
-    item_codes = [item.item_code for item in items]
-    item_details = get_item_details(item_codes)
-    
-    for item in items:
-        details = item_details.get(item.item_code, {})
-        item['barcode'] = details.get('barcode', item.item_code)
-        item['selling_rate'] = details.get('selling_rate', 0)
-    
-    return items
+    try:
+        settings = frappe.get_single("Barcode Print Settings")
+        
+        # Get label sizes from child table
+        label_sizes = []
+        default_size = None
+        
+        for size in settings.label_sizes:
+            size_data = {
+                "name": size.label_name,
+                "printer_name": size.printer_name or settings.default_printer,
+                "width": size.label_width,
+                "height": size.label_height,
+                "gap": size.gap_height,
+                "labels_per_row": size.labels_per_row,
+                "printable_height": size.printable_height,
+                "left_label_x": size.left_label_x,
+                "right_label_x": size.right_label_x,
+                "speed": size.print_speed,
+                "density": size.print_density,
+                "is_default": size.is_default
+            }
+            label_sizes.append(size_data)
+            
+            if size.is_default:
+                default_size = size.label_name
+        
+        return {
+            "default_printer": settings.default_printer or "Bar Code Printer TT065-50",
+            "default_price_list": settings.default_price_list or "Standard Selling",
+            "default_label_size": default_size or (label_sizes[0]["name"] if label_sizes else "35x15mm 2-up"),
+            "label_sizes": label_sizes
+        }
+    except Exception as e:
+        # Return defaults if settings not configured
+        return {
+            "default_printer": "Bar Code Printer TT065-50",
+            "default_price_list": "Standard Selling",
+            "default_label_size": "35x15mm 2-up",
+            "label_sizes": [
+                {
+                    "name": "35x15mm 2-up",
+                    "printer_name": "Bar Code Printer TT065-50",
+                    "width": 70,
+                    "height": 15,
+                    "gap": 3,
+                    "labels_per_row": 2,
+                    "printable_height": 10,
+                    "left_label_x": 8,
+                    "right_label_x": 305,
+                    "speed": 4,
+                    "density": 8,
+                    "is_default": True
+                },
+                {
+                    "name": "35x21mm 2-up",
+                    "printer_name": "Bar Code Printer TT065-50",
+                    "width": 70,
+                    "height": 21,
+                    "gap": 3,
+                    "labels_per_row": 2,
+                    "printable_height": 10,
+                    "left_label_x": 8,
+                    "right_label_x": 305,
+                    "speed": 4,
+                    "density": 8,
+                    "is_default": False
+                }
+            ]
+        }
 
 
 @frappe.whitelist()
@@ -167,20 +206,3 @@ def get_price_lists():
     """, as_dict=True)
     
     return [p.name for p in price_lists]
-
-
-@frappe.whitelist()
-def get_printer_settings():
-    """
-    Get printer settings for barcode printing.
-    """
-    return {
-        "printer_name": "Bar Code Printer TT065-50",
-        "label_sizes": [
-            {"value": "35x15", "label": "35×15mm (2-up on 70mm roll)"},
-            {"value": "35x21", "label": "35×21mm (2-up on 70mm roll)"},
-            {"value": "38x25", "label": "38×25mm"}
-        ],
-        "default_size": "35x15",
-        "dpi": 203
-    }

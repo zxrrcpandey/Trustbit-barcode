@@ -4,6 +4,10 @@
  * 
  * Copyright (c) 2025 Trustbit
  * License: MIT
+ * 
+ * Changes in v1.0.1:
+ * - Fetch selling price from Item Price table (Standard Selling price list)
+ * - Fallback to standard_rate if no price found
  */
 
 var trustbit_barcode = {
@@ -22,13 +26,16 @@ var trustbit_barcode = {
     show_barcode_dialog: function(frm) {
         let item_codes = frm.doc.items.map(item => item.item_code);
         
-        console.log("=== TRUSTBIT BARCODE DEBUG ===");
+        console.log("=== TRUSTBIT BARCODE v1.0.1 DEBUG ===");
         console.log("Item codes:", item_codes);
         
-        // Fetch barcodes AND standard selling rates from Item master
+        // Fetch barcodes AND selling prices from Item Price table
         frappe.call({
             method: "trustbit_barcode.api.get_item_details",
-            args: { item_codes: JSON.stringify(item_codes) },
+            args: { 
+                item_codes: JSON.stringify(item_codes),
+                price_list: "Standard Selling"
+            },
             callback: function(r) {
                 console.log("API Response:", r);
                 let item_details = r.message || {};
@@ -36,7 +43,7 @@ var trustbit_barcode = {
                 let items = frm.doc.items.map(item => {
                     let details = item_details[item.item_code] || {};
                     let barcode = details.barcode || item.item_code;
-                    let rate = details.standard_rate || 0;
+                    let rate = details.selling_rate || 0;
                     
                     console.log(item.item_code + " => Barcode: " + barcode + ", Selling Rate: " + rate);
                     
@@ -44,7 +51,7 @@ var trustbit_barcode = {
                         item_code: item.item_code,
                         item_name: item.item_name,
                         qty: item.qty,
-                        rate: rate,  // Use standard selling rate from Item master
+                        rate: rate,
                         barcode: barcode
                     };
                 });
@@ -77,7 +84,7 @@ var trustbit_barcode = {
             fields.push({ fieldtype: "Column Break" });
             fields.push({ fieldtype: "Data", fieldname: "barcode_" + idx, label: "Barcode", default: item.barcode, read_only: 1 });
             fields.push({ fieldtype: "Column Break" });
-            fields.push({ fieldtype: "Currency", fieldname: "rate_" + idx, label: "Selling Rate", default: item.rate, read_only: 1 });
+            fields.push({ fieldtype: "Currency", fieldname: "rate_" + idx, label: "Selling Rate (₹)", default: item.rate, read_only: 0 });
             fields.push({ fieldtype: "Column Break" });
             fields.push({ fieldtype: "Int", fieldname: "qty_" + idx, label: "Print Qty", default: item.qty || 1 });
             fields.push({ fieldtype: "Section Break" });

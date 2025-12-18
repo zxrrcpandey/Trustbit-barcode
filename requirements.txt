@@ -1,0 +1,4 @@
+# Trustbit Advance Barcode Print Requirements
+# This app requires ERPNext/Frappe to be installed
+
+frappe

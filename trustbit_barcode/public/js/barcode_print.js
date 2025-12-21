@@ -1,5 +1,5 @@
 /**
-* Trustbit Advance Barcode Print v1.0.3
+* Trustbit Barcode Print v1.0.5
 * Direct thermal barcode label printing from ERPNext with QZ Tray
 * Copyright (c) 2025 Trustbit - MIT License
 */
@@ -49,7 +49,7 @@ var trustbit_barcode = {
         this.load_settings(function(settings) {
             let item_codes = frm.doc.items.map(item => item.item_code);
             
-            console.log("=== TRUSTBIT BARCODE v1.0.3 ===");
+            console.log("=== TRUSTBIT BARCODE v1.0.5 ===");
             console.log("Settings:", settings);
             
             frappe.call({
@@ -246,7 +246,7 @@ var trustbit_barcode = {
     }
 };
 
-// Register handlers
+// Register handlers for Purchase Invoice
 frappe.ui.form.on("Purchase Invoice", {
     refresh: function(frm) {
         if (frm.doc.docstatus === 1) {
@@ -257,6 +257,7 @@ frappe.ui.form.on("Purchase Invoice", {
     }
 });
 
+// Register handlers for Sales Invoice
 frappe.ui.form.on("Sales Invoice", {
     refresh: function(frm) {
         if (frm.doc.docstatus === 1) {
@@ -267,6 +268,7 @@ frappe.ui.form.on("Sales Invoice", {
     }
 });
 
+// Register handlers for Stock Entry
 frappe.ui.form.on("Stock Entry", {
     refresh: function(frm) {
         if (frm.doc.docstatus === 1) {
@@ -277,4 +279,4 @@ frappe.ui.form.on("Stock Entry", {
     }
 });
 
-console.log("Trustbit Barcode v1.0.3 loaded");
+console.log("Trustbit Barcode v1.0.5 loaded");

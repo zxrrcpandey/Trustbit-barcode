@@ -3,7 +3,7 @@
 # For license information, please see license.txt
 
 """
-Trustbit Advance Barcode Print - API v1.0.3
+Trustbit Barcode - API v1.0.5
 Fetches barcodes, selling prices, and settings from database
 """
 
@@ -56,7 +56,7 @@ def get_item_details(item_codes, price_list=None):
         try:
             settings = frappe.get_single("Barcode Print Settings")
             price_list = settings.default_price_list or "Standard Selling"
-        except:
+        except Exception:
             price_list = "Standard Selling"
     
     # Get selling prices from Item Price table
@@ -145,7 +145,7 @@ def get_barcode_print_settings():
             "default_label_size": default_size or (label_sizes[0]["name"] if label_sizes else "35x15mm 2-up"),
             "label_sizes": label_sizes
         }
-    except:
+    except Exception:
         # Return defaults if settings not configured
         return {
             "default_printer": "Bar Code Printer TT065-50",
